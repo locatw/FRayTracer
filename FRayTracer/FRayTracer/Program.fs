@@ -5,6 +5,12 @@ open System.IO
 open System.Text
 open System.Threading
 
+let mutable seed = Environment.TickCount
+let random = new ThreadLocal<Random>(
+                fun () ->
+                    Interlocked.Increment(&seed) |> ignore
+                    new Random(seed))
+
 [<Measure>] type rad
 
 [<Measure>] type degree
@@ -191,28 +197,15 @@ let getMaterial =
     | Sphere x -> x.Material
     | Plane x -> x.Material
 
-// ref: http://neue.cc/2013/03/06_399.html
-[<AbstractClass; Sealed>]
-type RandomProvider private() =
-    static let mutable seed = Environment.TickCount
-
-    static member private randomWrapper =
-        new ThreadLocal<Random>(fun () ->
-            Interlocked.Increment(&seed) |> ignore
-            new Random(seed))
-
-    static member GetThreadRandom() : Random =
-        RandomProvider.randomWrapper.Value
-
 let distanceAttenuation (color : Color) (ray : Ray) (hitInfo : HitInfo) =
     let distance = length (hitInfo.Position - ray.Origin)
     color / (1.0 + 0.01 * (pown distance 2))
 
 let createIndirectRay (hitInfo : HitInfo) =
-    let random = RandomProvider.GetThreadRandom()
-    let x = 2.0 * random.NextDouble() - 1.0
-    let y = 2.0 * random.NextDouble() - 1.0
-    let z = 2.0 * random.NextDouble() - 1.0
+    let rnd = random.Value
+    let x = 2.0 * rnd.NextDouble() - 1.0
+    let y = 2.0 * rnd.NextDouble() - 1.0
+    let z = 2.0 * rnd.NextDouble() - 1.0
     let normal =
         let n = normalize (new Vector(x, y, z))
         if 0.0 <= hitInfo.Normal * n then n else -n
@@ -268,7 +261,7 @@ let createPixelRays (camera : Camera) (width : int) (height : int) samplingCount
         + (float coord.Y) * pixelHeight * screenYAxis
 
     seq {
-        let random = RandomProvider.GetThreadRandom()
+        let random = new Random()
         for _ in 0..(samplingCount- 1) do
             let x = random.NextDouble() - 0.5
             let y = random.NextDouble() - 0.5
