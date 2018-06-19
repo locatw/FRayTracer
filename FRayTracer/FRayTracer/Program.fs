@@ -351,10 +351,8 @@ let createScene () =
 
 [<EntryPoint>]
 let main _ =
-    let width = 160
-    let height = 120
-    //let width = 640
-    //let height = 480
+    let width = 640
+    let height = 480
     let scene = createScene ()
 
     let stopWatch = Diagnostics.Stopwatch.StartNew()
