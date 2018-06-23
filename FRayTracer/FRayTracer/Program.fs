@@ -275,7 +275,7 @@ let renderPixel scene width height coord =
     let samplingCount = 1000
     let color =
         createPixelRays scene.Camera width height samplingCount coord
-        |> Array.Parallel.map (traceRay scene 10)
+        |> Array.map (traceRay scene 10)
         |> Array.reduce (fun acc color -> acc + color)
     color / (float samplingCount)
 
@@ -287,16 +287,9 @@ let render scene (width : int) (height : int) =
                     yield { X = x; Y = y } 
         }
         |> Seq.toArray
-    let len = Array.length coords
     let data =
         coords
-        |> Array.mapi (
-            fun i coord ->
-                let pixelColor = renderPixel scene width height coord
-                if i % 500 = 0 then
-                    let progress = ((float i ) / (float len)) * 100.0
-                    printfn "Progress: %.1f %%" progress
-                pixelColor)
+        |> Array.Parallel.mapi (fun _ coord -> renderPixel scene width height coord)
     { Width = width; Height = height; Data = data }
     
 let clamp minValue maxValue x = 
