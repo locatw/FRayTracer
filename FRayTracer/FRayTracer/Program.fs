@@ -111,7 +111,7 @@ type Color =
     
     static member White = { R = 1.0; G = 1.0; B = 1.0 }
 
-type Material = { Diffuse : Color; Emission : Color }
+type Material = { Diffuse : Color; Specular : Color; Emission : Color }
 
 type Sphere =
     val Center : Vector
@@ -217,14 +217,14 @@ let getMaterial =
     | Sphere x -> x.Material
     | Plane x -> x.Material
 
-let distanceAttenuation (color : Color) (ray : Ray) (hitInfo : HitInfo) =
+let distanceAttenuation (ray : Ray) (hitInfo : HitInfo) (color : Color) =
     if renderSettings.DistanceAttenuationEnabled then
         let distance = length (hitInfo.Position - ray.Origin)
         color / (1.0 + 0.01 * (pown distance 2))
     else
         color
 
-let createIndirectRay (ray : Ray) (hitInfo : HitInfo) =
+let createDiffuseRay (ray : Ray) (hitInfo : HitInfo) =
     let rnd = random.Value
 
     // base vectors in tangent space
@@ -241,6 +241,32 @@ let createIndirectRay (ray : Ray) (hitInfo : HitInfo) =
     let dir = x * u + y * v + z * n
     let origin = hitInfo.Position + 0.001 * hitInfo.Normal
     new Ray(origin, dir)
+    
+let createReflectRay (ray : Ray) (hitInfo : HitInfo) =
+    let dir = 2.0 * (-ray.Direction * hitInfo.Normal) * hitInfo.Normal - (-ray.Direction)
+    let origin = hitInfo.Position + 0.001 * hitInfo.Normal
+    new Ray(origin, dir)
+
+let calculateColor traceRay (ray : Ray) (hitInfo : HitInfo) =
+    let distanceAttenuation = distanceAttenuation ray hitInfo
+
+    let material = getMaterial hitInfo.Object
+    let emission =
+        let emission = material.Emission * (-ray.Direction * hitInfo.Normal)
+        distanceAttenuation emission
+    let diffuse =
+        match material.Diffuse with
+        | c when c = Color.Black -> Color.Black
+        | _ ->
+            let ray = createDiffuseRay ray hitInfo
+            material.Diffuse * (traceRay ray) |> distanceAttenuation
+    let specular =
+        match material.Specular with
+        | c when c = Color.Black -> Color.Black
+        | _ ->
+            let ray = createReflectRay ray hitInfo
+            material.Specular * (traceRay ray) |> distanceAttenuation
+    emission + diffuse + specular
 
 let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
     match depth with
@@ -254,19 +280,7 @@ let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
                | [] -> None
                | x -> Some (x |> List.minBy (fun hitInfo -> hitInfo.T))
         match hitInfo with
-        | Some hitInfo ->
-            let material = getMaterial hitInfo.Object
-            let emissionColor = material.Emission
-
-            if emissionColor.R <> 0.0 || emissionColor.G <> 0.0 || emissionColor.B <> 0.0 then
-                let emission = material.Emission * (-ray.Direction * hitInfo.Normal)
-                distanceAttenuation emission ray hitInfo
-            else
-                let indirectRay = createIndirectRay ray hitInfo
-                let color = traceRay scene (depth - 1) indirectRay
-
-                let diffuse = material.Diffuse * color
-                distanceAttenuation diffuse ray hitInfo
+        | Some hitInfo -> calculateColor (traceRay scene (depth - 1)) ray hitInfo
         | None -> Color.Black
 
 let createPixelRays (camera : Camera) (width : int) (height : int) samplingCount coord =
@@ -367,17 +381,39 @@ let createScene () =
     let camera = new Camera(new Vector(50.0, 52.0, 295.6), new Vector(0.0, -0.042612, -1.0), new Vector(0.0, 1.0, 0.0), createFovByDegree 30.0<degree>) 
     let spheres =
         [
-            new Sphere(new Vector(27.0, 16.5, 47.0), 16.5, { Diffuse = { R = 0.999; G = 0.999; B = 0.999 }; Emission = Color.Black })
-            new Sphere(new Vector(73.0, 16.5, 78.0), 16.5, { Diffuse = { R = 0.999; G = 0.999; B = 0.999 }; Emission = Color.Black })
-            new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6), 600.0, { Diffuse = Color.Black; Emission = lightColor })
+            new Sphere(new Vector(27.0, 16.5, 47.0),
+                       16.5,
+                       { Diffuse = Color.Black
+                         Specular = { R = 0.999; G = 0.999; B = 0.999 }
+                         Emission = Color.Black })
+            new Sphere(new Vector(73.0, 16.5, 78.0),
+                       16.5,
+                       { Diffuse = Color.Black
+                         Specular = { R = 0.999; G = 0.999; B = 0.999 }
+                         Emission = Color.Black })
+            new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6),
+                       600.0,
+                       { Diffuse = Color.Black
+                         Specular = Color.Black
+                         Emission = lightColor })
         ] |> List.map Sphere
     let planes =
         [
-            new Plane(new Vector(0.0, 81.6, 0.0), new Vector(0.0, -1.0, 0.0), { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Emission = Color.Black }) // top
-            new Plane(new Vector(0.0, 0.0, 0.0), new Vector(0.0, 1.0, 0.0), { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Emission = Color.Black }) // bottom
-            new Plane(new Vector(1.0, 0.0, 0.0), new Vector(1.0, 0.0, 0.0), { Diffuse = { R = 0.75; G = 0.25; B = 0.25 }; Emission = Color.Black }) // left
-            new Plane(new Vector(99.0, 0.0, 0.0), new Vector(-1.0, 0.0, 0.0), { Diffuse = { R = 0.25; G = 0.25; B = 0.75 }; Emission = Color.Black }) // right
-            new Plane(new Vector(0.0, 0.0, 0.0), new Vector(0.0, 0.0, 1.0), { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Emission = Color.Black }) // back
+            new Plane(new Vector(0.0, 81.6, 0.0),
+                      new Vector(0.0, -1.0, 0.0),
+                      { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // top
+            new Plane(new Vector(0.0, 0.0, 0.0),
+                      new Vector(0.0, 1.0, 0.0),
+                      { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // bottom
+            new Plane(new Vector(1.0, 0.0, 0.0),
+                      new Vector(1.0, 0.0, 0.0),
+                      { Diffuse = { R = 0.75; G = 0.25; B = 0.25 }; Specular = Color.Black; Emission = Color.Black }) // left
+            new Plane(new Vector(99.0, 0.0, 0.0),
+                      new Vector(-1.0, 0.0, 0.0),
+                      { Diffuse = { R = 0.25; G = 0.25; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // right
+            new Plane(new Vector(0.0, 0.0, 0.0),
+                      new Vector(0.0, 0.0, 1.0),
+                      { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // back
         ] |> List.map Plane
 
     { Objects = spheres @ planes; Camera = camera }
