@@ -243,30 +243,31 @@ let createIndirectRay (ray : Ray) (hitInfo : HitInfo) =
     new Ray(origin, dir)
 
 let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
-    let hitInfo =
-        scene.Objects
-        |> List.map (intersect ray)
-        |> List.choose id
-        |> function
-           | [] -> None
-           | x -> Some (x |> List.minBy (fun hitInfo -> hitInfo.T))
-    match hitInfo with
-    | Some hitInfo ->
-        let material = getMaterial hitInfo.Object
-        let emissionColor = material.Emission
+    match depth with
+    | 0 -> Color.Black
+    | _  ->
+        let hitInfo =
+            scene.Objects
+            |> List.map (intersect ray)
+            |> List.choose id
+            |> function
+               | [] -> None
+               | x -> Some (x |> List.minBy (fun hitInfo -> hitInfo.T))
+        match hitInfo with
+        | Some hitInfo ->
+            let material = getMaterial hitInfo.Object
+            let emissionColor = material.Emission
 
-        if emissionColor.R <> 0.0 || emissionColor.G <> 0.0 || emissionColor.B <> 0.0 then
-            let emission = material.Emission * (-ray.Direction * hitInfo.Normal)
-            distanceAttenuation emission ray hitInfo
-        elif 1 < depth then
-            let indirectRay = createIndirectRay ray hitInfo
-            let color = traceRay scene (depth - 1) indirectRay
+            if emissionColor.R <> 0.0 || emissionColor.G <> 0.0 || emissionColor.B <> 0.0 then
+                let emission = material.Emission * (-ray.Direction * hitInfo.Normal)
+                distanceAttenuation emission ray hitInfo
+            else
+                let indirectRay = createIndirectRay ray hitInfo
+                let color = traceRay scene (depth - 1) indirectRay
 
-            let diffuse = material.Diffuse * color
-            distanceAttenuation diffuse ray hitInfo
-        else
-            Color.Black
-    | None -> Color.Black
+                let diffuse = material.Diffuse * color
+                distanceAttenuation diffuse ray hitInfo
+        | None -> Color.Black
 
 let createPixelRays (camera : Camera) (width : int) (height : int) samplingCount coord =
     let aspect = (float width) / (float height)
