@@ -111,7 +111,11 @@ type Color =
     
     static member White = { R = 1.0; G = 1.0; B = 1.0 }
 
-type Material = { Diffuse : Color; Specular : Color; Emission : Color }
+type Material =
+    { Diffuse : Color; Specular : Color; Emission : Color }
+    with
+        static member Default =
+            { Diffuse = Color.Black; Specular = Color.Black; Emission = Color.Black }
 
 type Sphere =
     val Center : Vector
@@ -383,37 +387,31 @@ let createScene () =
         [
             new Sphere(new Vector(27.0, 16.5, 47.0),
                        16.5,
-                       { Diffuse = Color.Black
-                         Specular = { R = 0.999; G = 0.999; B = 0.999 }
-                         Emission = Color.Black })
+                       { Material.Default with Specular = { R = 0.999; G = 0.999; B = 0.999 } })
             new Sphere(new Vector(73.0, 16.5, 78.0),
                        16.5,
-                       { Diffuse = Color.Black
-                         Specular = { R = 0.999; G = 0.999; B = 0.999 }
-                         Emission = Color.Black })
+                       { Material.Default with Specular = { R = 0.999; G = 0.999; B = 0.999 } })
             new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6),
                        600.0,
-                       { Diffuse = Color.Black
-                         Specular = Color.Black
-                         Emission = lightColor })
+                       { Material.Default with Emission = lightColor })
         ] |> List.map Sphere
     let planes =
         [
             new Plane(new Vector(0.0, 81.6, 0.0),
                       new Vector(0.0, -1.0, 0.0),
-                      { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // top
+                      { Material.Default with Diffuse = { R = 0.75; G = 0.75; B = 0.75 } }) // top
             new Plane(new Vector(0.0, 0.0, 0.0),
                       new Vector(0.0, 1.0, 0.0),
-                      { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // bottom
+                      { Material.Default with Diffuse = { R = 0.75; G = 0.75; B = 0.75 } }) // bottom
             new Plane(new Vector(1.0, 0.0, 0.0),
                       new Vector(1.0, 0.0, 0.0),
-                      { Diffuse = { R = 0.75; G = 0.25; B = 0.25 }; Specular = Color.Black; Emission = Color.Black }) // left
+                      { Material.Default with Diffuse = { R = 0.75; G = 0.25; B = 0.25 } }) // left
             new Plane(new Vector(99.0, 0.0, 0.0),
                       new Vector(-1.0, 0.0, 0.0),
-                      { Diffuse = { R = 0.25; G = 0.25; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // right
+                      { Material.Default with Diffuse = { R = 0.25; G = 0.25; B = 0.75 } }) // right
             new Plane(new Vector(0.0, 0.0, 0.0),
                       new Vector(0.0, 0.0, 1.0),
-                      { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Specular = Color.Black; Emission = Color.Black }) // back
+                      { Material.Default with Diffuse = { R = 0.75; G = 0.75; B = 0.75 } }) // back
         ] |> List.map Plane
 
     { Objects = spheres @ planes; Camera = camera }
