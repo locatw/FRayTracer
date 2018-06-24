@@ -195,6 +195,19 @@ type Coordinate = { X : int; Y : int }
 
 type Image = { Width : int; Height : int; Data : Color array }
 
+type ProgressPrinter (totalCount : int, interval : int) =
+    let totalCount = totalCount
+    let interval = interval
+    let mutable count = 0
+    let lockObj = new Object()
+
+    member __.Print () =
+        lock lockObj (fun () ->
+            count <- count + 1
+            if count % interval = 0 then
+                let progress = ((float count) / (float totalCount)) * 100.0
+                printfn "Progress: %0.1f %%" progress)
+
 let getMaterial =
     function
     | Sphere x -> x.Material
@@ -291,9 +304,13 @@ let render scene (width : int) (height : int) =
                     yield { X = x; Y = y } 
         }
         |> Seq.toArray
+    let progressPrinter = new ProgressPrinter(Array.length coords, height)
     let data =
         coords
-        |> Array.Parallel.mapi (fun _ coord -> renderPixel scene width height coord)
+        |> Array.Parallel.map (fun coord ->
+            let pixelColor = renderPixel scene width height coord
+            progressPrinter.Print ()
+            pixelColor)
     { Width = width; Height = height; Data = data }
     
 let clamp minValue maxValue x = 
