@@ -246,8 +246,9 @@ let createPixelRays (camera : Camera) (width : int) (height : int) samplingCount
 
     let screenXAxis = cross camera.Direction camera.Up |> normalize
     let screenYAxis = -camera.Up
-    let screenWidth = 2.0 * tan ((float camera.Fov) / 2.0)
-    let screenHeight = screenWidth / aspect
+    let screenHeight = 2.0 * tan ((float camera.Fov) / 2.0)
+    let screenWidth = screenHeight * aspect
+
     let screenCenter = camera.Origin + camera.Direction
 
     let pixelWidth = screenWidth / (float width)
