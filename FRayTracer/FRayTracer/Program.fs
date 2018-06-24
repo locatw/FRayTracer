@@ -338,22 +338,22 @@ let writePpm path image =
         file.WriteLine(line)
 
 let createScene () =
-    let camera = new Camera(new Vector(0.0, 0.0, 20.0), new Vector(0.0, 0.0, -1.0), new Vector(0.0, 1.0, 0.0), createFovByDegree 60.0<degree>) 
+    let camera = new Camera(new Vector(50.0, 52.0, 295.6), new Vector(0.0, -0.042612, -1.0), new Vector(0.0, 1.0, 0.0), createFovByDegree 30.0<degree>) 
     let spheres =
         [
-            new Sphere(new Vector(3.0, -3.0, 2.0), 2.0, { Diffuse = Color.White; Emission = Color.Black })
-            new Sphere(new Vector(-3.0, -3.0, -1.0), 2.0, { Diffuse = Color.White; Emission = Color.Black })
+            new Sphere(new Vector(27.0, 16.5, 47.0), 16.5, { Diffuse = { R = 0.999; G = 0.999; B = 0.999 }; Emission = Color.Black })
+            new Sphere(new Vector(73.0, 16.5, 78.0), 16.5, { Diffuse = { R = 0.999; G = 0.999; B = 0.999 }; Emission = Color.Black })
+            new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6), 600.0, { Diffuse = Color.Black; Emission = 12.0 * Color.White })
         ] |> List.map Sphere
     let planes =
         [
-            new Plane(new Vector(0.0, 5.0, 0.0), new Vector(0.0, -1.0, 0.0), { Diffuse = Color.Black; Emission = 30.0 * Color.White }) // top
-            new Plane(new Vector(0.0, -5.0, 0.0), new Vector(0.0, 1.0, 0.0), { Diffuse = Color.White; Emission = Color.Black }) // bottom
-            new Plane(new Vector(-6.0, 0.0, 0.0), new Vector(1.0, 0.0, 0.0), { Diffuse = { R = 1.0; G = 0.0; B = 0.0 }; Emission = Color.Black }) // left
-            new Plane(new Vector(6.0, 0.0, 0.0), new Vector(-1.0, 0.0, 0.0), { Diffuse = { R = 0.0; G = 0.0; B = 1.0 }; Emission = Color.Black }) // right
-            new Plane(new Vector(0.0, 0.0, -5.0), new Vector(0.0, 0.0, 1.0), { Diffuse = Color.White; Emission = Color.Black }) // back
-            new Plane(new Vector(0.0, 0.0, 25.0), new Vector(0.0, 0.0, -1.0), { Diffuse = Color.White; Emission = Color.Black }) // front
+            new Plane(new Vector(0.0, 81.6, 0.0), new Vector(0.0, -1.0, 0.0), { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Emission = Color.Black }) // top
+            new Plane(new Vector(0.0, 0.0, 0.0), new Vector(0.0, 1.0, 0.0), { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Emission = Color.Black }) // bottom
+            new Plane(new Vector(1.0, 0.0, 0.0), new Vector(1.0, 0.0, 0.0), { Diffuse = { R = 0.75; G = 0.25; B = 0.25 }; Emission = Color.Black }) // left
+            new Plane(new Vector(99.0, 0.0, 0.0), new Vector(-1.0, 0.0, 0.0), { Diffuse = { R = 0.25; G = 0.25; B = 0.75 }; Emission = Color.Black }) // right
+            new Plane(new Vector(0.0, 0.0, 0.0), new Vector(0.0, 0.0, 1.0), { Diffuse = { R = 0.75; G = 0.75; B = 0.75 }; Emission = Color.Black }) // back
         ] |> List.map Plane
-        
+
     { Objects = spheres @ planes; Camera = camera }
 
 [<EntryPoint>]
