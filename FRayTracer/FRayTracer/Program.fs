@@ -224,14 +224,21 @@ let distanceAttenuation (color : Color) (ray : Ray) (hitInfo : HitInfo) =
     else
         color
 
-let createIndirectRay (hitInfo : HitInfo) =
+let createIndirectRay (ray : Ray) (hitInfo : HitInfo) =
     let rnd = random.Value
-    let x = 2.0 * rnd.NextDouble() - 1.0
-    let y = 2.0 * rnd.NextDouble() - 1.0
-    let z = 2.0 * rnd.NextDouble() - 1.0
-    let dir =
-        let dir = normalize (new Vector(x, y, z))
-        if 0.0 <= hitInfo.Normal * dir then dir else -dir
+
+    // base vectors in tangent space
+    let u = (cross hitInfo.Normal ray.Direction) |> normalize
+    let v = (cross u hitInfo.Normal) |> normalize
+    let n = hitInfo.Normal
+
+    let r = sqrt (rnd.NextDouble())
+    let theta = 2.0 * Math.PI * rnd.NextDouble()
+    let x = r * (cos theta)
+    let y = r * (sin theta)
+    let z = sqrt (max 0.0 (1.0 - x * x - y * y))
+
+    let dir = x * u + y * v + z * n
     let origin = hitInfo.Position + 0.001 * hitInfo.Normal
     new Ray(origin, dir)
 
@@ -252,7 +259,7 @@ let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
             let emission = material.Emission * (-ray.Direction * hitInfo.Normal)
             distanceAttenuation emission ray hitInfo
         elif 1 < depth then
-            let indirectRay = createIndirectRay hitInfo
+            let indirectRay = createIndirectRay ray hitInfo
             let color = traceRay scene (depth - 1) indirectRay
 
             let diffuse = material.Diffuse * color
