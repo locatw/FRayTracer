@@ -208,14 +208,21 @@ type ProgressPrinter (totalCount : int, interval : int) =
                 let progress = ((float count) / (float totalCount)) * 100.0
                 printfn "Progress: %0.1f %%" progress)
 
+type RenderSettings = { DistanceAttenuationEnabled : bool }
+
+let renderSettings = { DistanceAttenuationEnabled = false }
+
 let getMaterial =
     function
     | Sphere x -> x.Material
     | Plane x -> x.Material
 
 let distanceAttenuation (color : Color) (ray : Ray) (hitInfo : HitInfo) =
-    let distance = length (hitInfo.Position - ray.Origin)
-    color / (1.0 + 0.01 * (pown distance 2))
+    if renderSettings.DistanceAttenuationEnabled then
+        let distance = length (hitInfo.Position - ray.Origin)
+        color / (1.0 + 0.01 * (pown distance 2))
+    else
+        color
 
 let createIndirectRay (hitInfo : HitInfo) =
     let rnd = random.Value
@@ -343,12 +350,18 @@ let writePpm path image =
         file.WriteLine(line)
 
 let createScene () =
+    let lightColor =
+        if renderSettings.DistanceAttenuationEnabled then
+            1000000.0 * Color.White
+        else
+            12.0 * Color.White
+
     let camera = new Camera(new Vector(50.0, 52.0, 295.6), new Vector(0.0, -0.042612, -1.0), new Vector(0.0, 1.0, 0.0), createFovByDegree 30.0<degree>) 
     let spheres =
         [
             new Sphere(new Vector(27.0, 16.5, 47.0), 16.5, { Diffuse = { R = 0.999; G = 0.999; B = 0.999 }; Emission = Color.Black })
             new Sphere(new Vector(73.0, 16.5, 78.0), 16.5, { Diffuse = { R = 0.999; G = 0.999; B = 0.999 }; Emission = Color.Black })
-            new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6), 600.0, { Diffuse = Color.Black; Emission = 12.0 * Color.White })
+            new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6), 600.0, { Diffuse = Color.Black; Emission = lightColor })
         ] |> List.map Sphere
     let planes =
         [
