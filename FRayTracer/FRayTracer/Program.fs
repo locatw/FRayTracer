@@ -229,11 +229,11 @@ let createIndirectRay (hitInfo : HitInfo) =
     let x = 2.0 * rnd.NextDouble() - 1.0
     let y = 2.0 * rnd.NextDouble() - 1.0
     let z = 2.0 * rnd.NextDouble() - 1.0
-    let normal =
-        let n = normalize (new Vector(x, y, z))
-        if 0.0 <= hitInfo.Normal * n then n else -n
+    let dir =
+        let dir = normalize (new Vector(x, y, z))
+        if 0.0 <= hitInfo.Normal * dir then dir else -dir
     let origin = hitInfo.Position + 0.001 * hitInfo.Normal
-    new Ray(origin, normal)
+    new Ray(origin, dir)
 
 let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
     let hitInfo =
