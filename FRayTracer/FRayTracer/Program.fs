@@ -248,7 +248,7 @@ let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
             let indirectRay = createIndirectRay hitInfo
             let color = traceRay scene (depth - 1) indirectRay
 
-            let diffuse = material.Diffuse * color * (-ray.Direction * hitInfo.Normal)
+            let diffuse = material.Diffuse * color
             distanceAttenuation diffuse ray hitInfo
         else
             Color.Black
