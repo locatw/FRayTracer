@@ -84,7 +84,10 @@ type Camera =
     val Fov : Fov
 
     new(origin, direction, up, fov) =
-        { Origin = origin; Direction = normalize direction; Up = normalize up; Fov = fov }
+        { Origin = origin
+          Direction = normalize direction
+          Up = cross up direction |> cross direction |> normalize
+          Fov = fov }
 
 type Color =
     { R : float; G : float; B : float }
