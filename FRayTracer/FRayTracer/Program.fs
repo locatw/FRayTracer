@@ -296,6 +296,10 @@ let renderPixel scene width height coord =
         |> Array.reduce (fun acc color -> acc + color)
     color / (float samplingCount)
 
+let toneMap color =
+    let exponent = 1.0 / 2.2
+    { R = color.R ** exponent; G = color.G ** exponent; B = color.B ** exponent }
+
 let render scene (width : int) (height : int) =
     let coords =
         seq {
@@ -311,6 +315,7 @@ let render scene (width : int) (height : int) =
             let pixelColor = renderPixel scene width height coord
             progressPrinter.Print ()
             pixelColor)
+        |> Array.map toneMap
     { Width = width; Height = height; Data = data }
     
 let clamp minValue maxValue x = 
