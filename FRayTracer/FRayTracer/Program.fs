@@ -112,10 +112,10 @@ type Color =
     static member White = { R = 1.0; G = 1.0; B = 1.0 }
 
 type Material =
-    { Diffuse : Color; Specular : Color; Emission : Color }
+    { Diffuse : Color; Specular : Color; Emission : Color; IndexOfRefraction : float option }
     with
         static member Default =
-            { Diffuse = Color.Black; Specular = Color.Black; Emission = Color.Black }
+            { Diffuse = Color.Black; Specular = Color.Black; Emission = Color.Black; IndexOfRefraction = None }
 
 type Sphere =
     val Center : Vector
@@ -228,6 +228,12 @@ let distanceAttenuation (ray : Ray) (hitInfo : HitInfo) (color : Color) =
     else
         color
 
+let reflectance (ray : Ray) (normal : Vector) n1 n2 =
+    // schlick's approximation
+    let cosTheta = -ray.Direction * normal 
+    let r = pown ((n1 - n2) / (n1 + n2)) 2
+    r + (1.0 - r) * (pown (1.0 - cosTheta) 5)
+
 let createDiffuseRay (ray : Ray) (hitInfo : HitInfo) =
     let rnd = random.Value
 
@@ -251,6 +257,20 @@ let createReflectRay (ray : Ray) (hitInfo : HitInfo) =
     let origin = hitInfo.Position + 0.001 * hitInfo.Normal
     new Ray(origin, dir)
 
+let createRefractRay (ray : Ray) (hitInfo : HitInfo) (ior : float) =
+    let inObject = -ray.Direction * hitInfo.Normal < 0.0
+    let normal = if inObject then -hitInfo.Normal else hitInfo.Normal
+    let eta = if inObject then ior else 1.0 / ior
+    let a = -ray.Direction * normal
+    let d = 1.0 - (pown eta 2) * (1.0 - (pown a 2))
+    if 0.0 <= d then
+        let dir = -eta * (-ray.Direction - a * normal) - normal * (sqrt d)
+        let origin = hitInfo.Position - 0.001 * normal
+        Some(new Ray(origin, dir))
+    else
+        // total reflection
+        None
+
 let calculateColor traceRay (ray : Ray) (hitInfo : HitInfo) =
     let distanceAttenuation = distanceAttenuation ray hitInfo
 
@@ -264,13 +284,37 @@ let calculateColor traceRay (ray : Ray) (hitInfo : HitInfo) =
         | _ ->
             let ray = createDiffuseRay ray hitInfo
             material.Diffuse * (traceRay ray) |> distanceAttenuation
-    let specular =
-        match material.Specular with
-        | c when c = Color.Black -> Color.Black
-        | _ ->
-            let ray = createReflectRay ray hitInfo
-            material.Specular * (traceRay ray) |> distanceAttenuation
-    emission + diffuse + specular
+    let (specular, refraction) =
+        let calculateSpecular () =
+            match material.Specular with
+            | c when c = Color.Black -> Color.Black
+            | _ ->
+                let ray = createReflectRay ray hitInfo
+                material.Specular * (traceRay ray) |> distanceAttenuation
+
+        match material.IndexOfRefraction with
+        | Some ior ->
+            let refractRay = createRefractRay ray hitInfo ior
+            match refractRay with
+            | Some refractRay ->
+                let rnd = random.Value
+                let kr =
+                    let inObject = -ray.Direction * hitInfo.Normal < 0.0
+                    let normal = if inObject then -hitInfo.Normal else hitInfo.Normal
+                    reflectance ray normal 1.0 ior
+                if kr < rnd.NextDouble() then
+                    let refraction = (traceRay refractRay) |> distanceAttenuation
+                    (Color.Black, refraction)
+                else
+                    let specular = calculateSpecular ()
+                    (specular, Color.Black)
+            | None ->
+                let specular = calculateSpecular ()
+                (specular, Color.Black)
+        | None ->
+            let specular = calculateSpecular ()
+            (specular, Color.Black)
+    emission + diffuse + specular + refraction
 
 let rec traceRay (scene : Scene) depth (ray : Ray) : Color =
     match depth with
@@ -390,7 +434,7 @@ let createScene () =
                        { Material.Default with Specular = { R = 0.999; G = 0.999; B = 0.999 } })
             new Sphere(new Vector(73.0, 16.5, 78.0),
                        16.5,
-                       { Material.Default with Specular = { R = 0.999; G = 0.999; B = 0.999 } })
+                       { Material.Default with Specular = { R = 0.999; G = 0.999; B = 0.999 }; IndexOfRefraction = Some(1.5168) })
             new Sphere(new Vector(50.0, 681.6 - 0.27, 81.6),
                        600.0,
                        { Material.Default with Emission = lightColor })
